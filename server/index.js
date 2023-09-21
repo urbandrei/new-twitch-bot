@@ -3,8 +3,55 @@ const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const port = process.env.SERVER_PORT || 5000;
+const WebSocketClient = require('websocket').client;
+const client = new WebSocketClient();
 require('dotenv').config({path: "../.env"});
 var token = '';
+const messages = {all:[]};
+
+client.on('connectFailed', function(error) {
+	console.log('Connect error: ' + error.toString());
+});
+
+client.on('connect', function(connection) {
+	console.log('WebSocket Client Connected');
+	connection.sendUTF('CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands');
+	connection.sendUTF(`PASS oauth:`+token); 
+	connection.sendUTF(`NICK urbandrei`);
+	connection.sendUTF('JOIN #urbandrei');
+
+	connection.on('error', function(error) {
+		console.log("Connection Error: " + error.toString());
+	});
+
+	connection.on('close', function() {
+		console.log('Connection Closed');
+		console.log(`close description: ${connection.closeDescription}`);
+		console.log(`close reason code: ${connection.closeReasonCode}`);
+
+		clearInterval(intervalObj);
+	});
+
+	connection.on('message', function(ircMessage) {
+		if (ircMessage.type === 'utf8') {
+			let rawIrcMessage = ircMessage.utf8Data.trimEnd();
+			console.log(`Message received (${new Date().toISOString()}): '${rawIrcMessage}'\n`);
+			if (rawIrcMessage.includes("PRIVMSG")) {
+				let id = rawIrcMessage.substring(rawIrcMessage.indexOf('user-id=')+8).split(';')[0];;
+				
+				let message = rawIrcMessage.substring(rawIrcMessage.lastIndexOf(":")+1);
+				let i = 0;
+				while ( i < messages.all.length ) {
+					if(messages.all[i].user_id == id) {
+						messages.all.splice(i);
+					}
+					i++;
+				}
+				messages.all.push({user_id:id, text:message});
+			}
+		}
+	});
+});
 
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(bodyParser.json());
@@ -26,6 +73,7 @@ app.post('/code', (req, res) => {
         })
         .then((response) => response.json())
         .then((data) => {token = data.access_token})
+	.then((data) => {client.connect('ws://irc-ws.chat.twitch.tv:80')})
         .catch((error) => {
                 console.error('Error:',error.message);
         });
@@ -41,7 +89,7 @@ app.get('/users', (req, res) => {
                 },
         })
         .then((response) => response.json())
-        .then((data) => res.json(data))
+        .then((data) => res.json({users:data,mess:messages}))
         .catch((error) => {
                 console.error('Error:',error.message);
         });
