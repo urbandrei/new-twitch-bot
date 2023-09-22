@@ -2,8 +2,57 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const port = process.env.SERVER_PORT || 5000;
+const http = require('http');
+const WebSocket = require('ws');
 require('dotenv').config({path: "../.env"});
 var token = '';
+const messages = {all:[]};
+
+const server = http.createServer(app);
+const wss = new WebSocket.Server({server});
+
+wss.on('connection', (ws) => {
+	console.log('Client connected');
+	
+	ws.on('close', () => {
+		console.log('Client disconnected');
+	});
+});
+
+server.listen(3001, () => {
+  console.log('WebSocket server is listening on port 3001');
+});
+
+const tws = new WebSocket('ws://irc-ws.chat.twitch.tv:80');
+
+tws.on('error', function(error) {
+	console.log('Connect error: ' + error.toString());
+});
+
+tws.on('open', function(connection) {
+	console.log('WebSocket Client Connected');
+	tws.on('error', function(error) {
+		console.log("Connection Error: " + error.toString());
+	});
+
+	tws.on('close', function() {
+		console.log('Connection Closed');
+		tws.close();
+	});
+
+	tws.on('message', function(ircMessage) {
+		let mes = ircMessage.toString().trimEnd();
+		if (mes.includes("PRIVMSG")) {
+			let id = mes.substring(mes.indexOf('user-id=')+8).split(';')[0];
+			let message = mes.substring(mes.lastIndexOf(":")+1);
+			wss.clients.forEach((client) => {
+                		if (client.readyState === WebSocket.OPEN) {
+                        		client.send(JSON.stringify({user_id:id,mess:message,}));
+                		}
+			});
+		}
+	});
+});
 
 const app = express();
 app.use(cors({ origin: 'http://localhost:3000' }));
@@ -26,6 +75,13 @@ app.post('/code', (req, res) => {
         })
         .then((response) => response.json())
         .then((data) => {token = data.access_token})
+	.then((data) => {
+		console.log("Connecting to Twitch...");
+		tws.send('CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands');
+        	tws.send(`PASS oauth:`+token);
+        	tws.send(`NICK urbandrei`);
+        	tws.send('JOIN #urbandrei');
+	})
         .catch((error) => {
                 console.error('Error:',error.message);
         });
