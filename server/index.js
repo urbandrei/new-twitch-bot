@@ -1,11 +1,11 @@
 const express = require('express');
-const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const port = process.env.SERVER_PORT || 5000;
 require('dotenv').config({path: "../.env"});
 var token = '';
 
+const app = express();
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(bodyParser.json());
 
