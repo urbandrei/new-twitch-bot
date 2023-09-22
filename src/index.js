@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import Layout from "./pages/Layout";
 import NoPage from "./pages/NoPage";
 import Users from "./pages/Users";
+import Test from "./pages/Test";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route index element={<Redirect />} />
           <Route path="home" element={<Home />} />
           <Route path="users" element={<Users />} />
+	  <Route path="test" element={<Test />} />
           <Route path="*" element={<NoPage />} />
         </Route>
       </Routes>

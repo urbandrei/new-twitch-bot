@@ -1,7 +1,18 @@
 import './Users.css';
 import { useState, useEffect } from "react";
 
+const socket = new WebSocket('ws://localhost:3001');
 var data = [];
+
+socket.onmessage = (event) => {
+	const receivedMessage = JSON.parse(event.data);
+	for( let i of data ) {
+		if(i.user_id == receivedMessage.user_id) {
+			i.message = receivedMessage.mess;
+			i.message_timer = 1000;
+		}
+	}
+};
 
 function compareByID(a,b) {
         if ( a.user_id < b.user_id ){
@@ -14,24 +25,12 @@ function compareByID(a,b) {
 }
 
 function updateUsers(moreinfo) {
-	console.log(moreinfo.users);
-        const info = moreinfo.users.data;
-	const messages = moreinfo.mess.all;
 	data.sort(compareByID);
+	const info = moreinfo.data;
         info.sort(compareByID);
-	messages.sort(compareByID);
         var i = 0;
         var j = 0;
         while (i < data.length || j < info.length) {
-                if (messages.length > 0) {
-			if (messages[0].user_id == data[i].user_id) {
-				data[i].message = messages[0].text;
-				messages.shift();
-			}
-			else if (messages[0].user_id < data[i].user_id) {
-				messages.shift();
-			}
-		}
 		if (j >= info.length) {
                         if(data[i].position<-400) {
                                 data.splice(i, 1);
@@ -49,6 +48,7 @@ function updateUsers(moreinfo) {
                                 state:"right",
                                 frame:Math.floor(Math.random()*12),
 				message:"",
+				message_timer:0,
                         });
                         i++;
                         j++;
@@ -77,6 +77,7 @@ function updateUsers(moreinfo) {
                                 state:"right",
                                 frame:Math.floor(Math.random()*12),
 				message:"",
+				message_timer:0,
                         });
                         i++;
                         j++;
@@ -92,7 +93,7 @@ function Character(props) {
                 left: props.pos+"px",
         };
         return <div className="character" style={pos}>
-                <h1>{props.message}</h1>
+                <message>{props.message}</message>
 		<character-text>{props.name}</character-text>
                 <img src="blank.png" className="character-image" style={frame}></img>
                 </div>;
@@ -100,7 +101,13 @@ function Character(props) {
 
 function updateState() {
         for(let i = 0; i < data.length; i++){
-                if(data[i].state == "leaving") {/*do nothing*/}
+                if(data[i].message_timer <=0) {
+			data[i].message = '';
+		}
+		else {
+			data[i].message_timer--;
+		}
+		if(data[i].state == "leaving") {/*do nothing*/}
                 else if(data[i].position < 0){
                         data[i].state = "right";
                 }
@@ -109,7 +116,6 @@ function updateState() {
                 }
                 else {
                         var random = Math.random();
-                        console.log(random);
                         if(random < .002) {
                                 data[i].state = "left";
                         }

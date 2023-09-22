@@ -3,52 +3,54 @@ const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const port = process.env.SERVER_PORT || 5000;
-const WebSocketClient = require('websocket').client;
-const client = new WebSocketClient();
+const http = require('http');
+const WebSocket = require('ws');
 require('dotenv').config({path: "../.env"});
 var token = '';
 const messages = {all:[]};
 
-client.on('connectFailed', function(error) {
+const server = http.createServer(app);
+const wss = new WebSocket.Server({server});
+
+wss.on('connection', (ws) => {
+	console.log('Client connected');
+	
+	ws.on('close', () => {
+		console.log('Client disconnected');
+	});
+});
+
+server.listen(3001, () => {
+  console.log('WebSocket server is listening on port 3001');
+});
+
+const tws = new WebSocket('ws://irc-ws.chat.twitch.tv:80');
+
+tws.on('error', function(error) {
 	console.log('Connect error: ' + error.toString());
 });
 
-client.on('connect', function(connection) {
+tws.on('open', function(connection) {
 	console.log('WebSocket Client Connected');
-	connection.sendUTF('CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands');
-	connection.sendUTF(`PASS oauth:`+token); 
-	connection.sendUTF(`NICK urbandrei`);
-	connection.sendUTF('JOIN #urbandrei');
-
-	connection.on('error', function(error) {
+	tws.on('error', function(error) {
 		console.log("Connection Error: " + error.toString());
 	});
 
-	connection.on('close', function() {
+	tws.on('close', function() {
 		console.log('Connection Closed');
-		console.log(`close description: ${connection.closeDescription}`);
-		console.log(`close reason code: ${connection.closeReasonCode}`);
-
-		clearInterval(intervalObj);
+		tws.close();
 	});
 
-	connection.on('message', function(ircMessage) {
-		if (ircMessage.type === 'utf8') {
-			let rawIrcMessage = ircMessage.utf8Data.trimEnd();
-			console.log(`Message received (${new Date().toISOString()}): '${rawIrcMessage}'\n`);
-			if (rawIrcMessage.includes("PRIVMSG")) {
-				let id = rawIrcMessage.substring(rawIrcMessage.indexOf('user-id=')+8).split(';')[0];;
-				
-				let message = rawIrcMessage.substring(rawIrcMessage.lastIndexOf(":")+1);
-				let i = 0;
-				while ( i < messages.all.length ) {
-					if(messages.all[i].user_id == id) {
-						messages.all.splice(i);
-					}
-					i++;
-				}
-				messages.all.push({user_id:id, text:message});
-			}
+	tws.on('message', function(ircMessage) {
+		let mes = ircMessage.toString().trimEnd();
+		if (mes.includes("PRIVMSG")) {
+			let id = mes.substring(mes.indexOf('user-id=')+8).split(';')[0];
+			let message = mes.substring(mes.lastIndexOf(":")+1);
+			wss.clients.forEach((client) => {
+                		if (client.readyState === WebSocket.OPEN) {
+                        		client.send(JSON.stringify({user_id:id,mess:message,}));
+                		}
+			});
 		}
 	});
 });
@@ -73,7 +75,13 @@ app.post('/code', (req, res) => {
         })
         .then((response) => response.json())
         .then((data) => {token = data.access_token})
-	.then((data) => {client.connect('ws://irc-ws.chat.twitch.tv:80')})
+	.then((data) => {
+		console.log("Connecting to Twitch...");
+		tws.send('CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands');
+        	tws.send(`PASS oauth:`+token);
+        	tws.send(`NICK urbandrei`);
+        	tws.send('JOIN #urbandrei');
+	})
         .catch((error) => {
                 console.error('Error:',error.message);
         });
@@ -89,7 +97,7 @@ app.get('/users', (req, res) => {
                 },
         })
         .then((response) => response.json())
-        .then((data) => res.json({users:data,mess:messages}))
+        .then((data) => res.json(data))
         .catch((error) => {
                 console.error('Error:',error.message);
         });
