@@ -1,4 +1,5 @@
 const express = require('express');
+const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const port = process.env.SERVER_PORT || 5000;
@@ -30,6 +31,9 @@ function randomColor() {
 	else if (rand==4) { return "blue";   }
 	return "purple";
 }
+
+app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(bodyParser.json());
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({server});
@@ -135,10 +139,6 @@ tws.on('open', function(connection) {
 		}
 	});
 });
-
-const app = express();
-app.use(cors({ origin: 'http://localhost:3000' }));
-app.use(bodyParser.json());
 
 app.post('/code', (req, res) => {
         var code = req.body.data;
