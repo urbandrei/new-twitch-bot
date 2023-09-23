@@ -8,6 +8,9 @@
 # api keys
 .env
 
+# database
+/server/db
+
 # testing
 /coverage
 

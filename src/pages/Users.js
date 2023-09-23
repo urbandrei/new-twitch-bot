@@ -12,6 +12,10 @@ socket.onmessage = (event) => {
 			i.message_timer = 1000;
 		}
 	}
+	fetch('http://localhost:5000/users')
+	.then((response) => response.json())
+	.then((info) => updateUsers(info))
+	.catch((error) => console.error('Error fetching data:', error));
 };
 
 function compareByID(a,b) {
@@ -49,6 +53,7 @@ function updateUsers(moreinfo) {
                                 frame:Math.floor(Math.random()*12),
 				message:"",
 				message_timer:0,
+				color:info[j].color,
                         });
                         i++;
                         j++;
@@ -57,6 +62,7 @@ function updateUsers(moreinfo) {
                         if(data[i].state == "leaving") {
                                 data[i].state = "right";
                         }
+			data[i].color = info[j].color;
                         i++;
                         j++;
                 }
@@ -78,6 +84,7 @@ function updateUsers(moreinfo) {
                                 frame:Math.floor(Math.random()*12),
 				message:"",
 				message_timer:0,
+				color:info[j].color,
                         });
                         i++;
                         j++;
@@ -86,15 +93,16 @@ function updateUsers(moreinfo) {
 }
 
 function Character(props) {
+	let vert = (props.state=="left"||props.state=="leaving")*(-200)+(props.color=="orange")*(-400)+(props.color=="yellow")*(-800)+(props.color=="green")*(-1200)+(props.color=="blue")*(-1600)+(props.color=="purple")*(-2000);
         var frame = {
-                background: "url('spritesheet.png') "+(200*(props.frame%12))+"px "+((props.state=="left" ||props.state=="leaving")*400)+"px",
+                background: "url('spritesheet.png') "+(200*(props.frame%12))+"px "+vert+"px",
         };
         var pos = {
                 left: props.pos+"px",
         };
         return <div className="character" style={pos}>
-                <message>{props.message}</message>
-		<character-text>{props.name}</character-text>
+		<div class="message">{props.message}</div>
+		<div class="character-text">{props.name}</div>
                 <img src="blank.png" className="character-image" style={frame}></img>
                 </div>;
 }
@@ -158,7 +166,7 @@ function Users() {
         return (
                 <main>
                 {
-                        data.map((item, index) => (<Character key={index} id={item.user_id} name={item.name} frame={item.frame} pos={item.position} state={item.state} message={item.message}/>))
+                        data.map((item, index) => (<Character key={index} id={item.user_id} name={item.name} frame={item.frame} pos={item.position} state={item.state} message={item.message} color={item.color}/>))
 		}
                 </main>
         )
