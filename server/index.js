@@ -86,7 +86,7 @@ tws.on('open', function(connection) {
 				}
 				else { /*logic for message*/ }
 			});
-
+			console.log(message);
 			if(message == "!red") {
 				db.run("UPDATE Users SET color = 'red' WHERE user_id = " + id + ";");
 				for (let i of Users) {

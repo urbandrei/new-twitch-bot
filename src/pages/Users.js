@@ -109,31 +109,49 @@ function Character(props) {
 
 function updateState() {
         for(let i = 0; i < data.length; i++){
-                if(data[i].message_timer <=0) {
+		let distance = 2000;
+		for ( let j of data ) {
+			if (Math.abs(j.position-data[i].position) < Math.abs(distance)) {
+				distance = j.position-data[i].positionl
+			}
+		}
+		if(data[i].message_timer <=0) {
 			data[i].message = '';
 		}
 		else {
 			data[i].message_timer--;
 		}
 		if(data[i].state == "leaving") {/*do nothing*/}
-                else if(data[i].position < 0){
+                else if(data[i].position < -150){
                         data[i].state = "right";
                 }
-                else if(data[i].position>2560-400) {
+                else if(data[i].position>window.innerWidth-250) {
                         data[i].state = "left";
                 }
                 else {
                         var random = Math.random();
-                        if(random < .002) {
-                                data[i].state = "left";
-                        }
-			else if(random < .004) {
-                                data[i].state = "right";
-                        }
-                        else if(random < .008) {
+                        if(random < .005) {
                                 data[i].state = "wait";
                         }
+			else if(random < .008) {
+                                if(distance<0) {
+					data[i].state = "left";
+				}
+				else {
+					data[i].state = "right";
+				}
+                        }
+                        else if(random < .009) {
+                                if(distance<0) {
+                                        data[i].state = "right";
+                                }
+                                else {
+                                        data[i].state = "left";
+                                }
+                        }
                 }
+
+			
                 if(data[i].state == "wait") {
                         data[i].frame = 2;
                 }
