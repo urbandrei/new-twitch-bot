@@ -7,9 +7,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const sqlite3 = require('sqlite3').verbose();
 
-
 require('dotenv').config({path: "../.env"});
-var token = '';
 
 let db = new sqlite3.Database(__dirname + "/db", (err) => {
         if (err) { return console.error(err.message); }
@@ -20,6 +18,12 @@ let Users = [];
 db.all("SELECT * FROM Users;",[],(err, row) => {
                 if (err) {throw err;}
                 else { Users = row; }
+});
+
+var token = '';
+db.all("SELECT token FROM Twitch_Tokens;",[],(err, row) => {
+                if (err) {throw err;}
+                else { token = row[0]; }
 });
 
 function randomColor() {
@@ -159,7 +163,11 @@ app.post('/code', (req, res) => {
                 }),
         })
         .then((response) => response.json())
-        .then((data) => {token = data.access_token})
+        .then((data) => {
+		token = data.access_token;
+		db.run("UPDATE Twitch_Tokens SET token='" + token + "';");
+		db.run("UPDATE Twitch_Tokens SET refresh='" + data.refresh_token + "';");
+	})
 	.then((data) => {
 		console.log("Connecting to Twitch ChatBot...");
 		tws.send('CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands');
