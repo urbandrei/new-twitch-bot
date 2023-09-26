@@ -42,7 +42,7 @@ wss.on('connection', (ws) => {
 	console.log('Client connected');
 
 	ws.on('close', () => {
-		console.log('Client disconnected');
+		console.log('React Client Disconnected');
 	});
 });
 
@@ -62,9 +62,9 @@ tws.on('open', function(connection) {
 		console.log("Connection Error: " + error.toString());
 	});
 
-	tws.on('close', function() {
-		console.log('Connection Closed');
-		tws.close();
+	tws.on('close', function(error) {
+		console.log('Twitch ChatBot Connection Closed: '+ error);
+		
 	});
 
 	tws.on('message', function(ircMessage) {
@@ -86,7 +86,6 @@ tws.on('open', function(connection) {
 				}
 				else { /*logic for message*/ }
 			});
-			console.log(message);
 			if(message == "!red") {
 				db.run("UPDATE Users SET color = 'red' WHERE user_id = " + id + ";");
 				for (let i of Users) {
@@ -137,6 +136,10 @@ tws.on('open', function(connection) {
 			}
 
 		}
+		else if (mes.includes("PING")) {
+			tws.send(mes.replace("PING","PONG"));
+		}
+
 	});
 });
 
@@ -158,7 +161,7 @@ app.post('/code', (req, res) => {
         .then((response) => response.json())
         .then((data) => {token = data.access_token})
 	.then((data) => {
-		console.log("Connecting to Twitch...");
+		console.log("Connecting to Twitch ChatBot...");
 		tws.send('CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands');
         	tws.send(`PASS oauth:`+token);
         	tws.send(`NICK urbandrei`);
@@ -170,7 +173,6 @@ app.post('/code', (req, res) => {
 });
 
 app.get('/users', (req, res) => {
-        console.log("REQUEST: /users");
 	fetch('https://api.twitch.tv/helix/chat/chatters?broadcaster_id=590777735&moderator_id=590777735', {
                 method: 'GET',
                 headers: {
